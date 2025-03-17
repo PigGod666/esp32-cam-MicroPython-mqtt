@@ -119,3 +119,6 @@ password {
     }
 }
 ```
+---
+# 最后
+esp32cam开发环境的搭建可参考[这里](https://blog.csdn.net/weixin_45537132/article/details/141495676)
