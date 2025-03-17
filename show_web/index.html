@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Image Receiver</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
+    <style>
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="text"], input[type="password"] {
+            margin-bottom: 10px;
+            padding: 5px;
+            width: 100%;
+            max-width: 300px;
+        }
+        button {
+            padding: 5px 10px;
+        }
+        .param-group {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>MQTT Image Receiver</h1>
+    
+    <img id="image" src="" alt="Received Image" style="width: 100%; max-width: 1600px;">
+    <p id="fps"></p>
+
+    <form id="mqttConfigForm">
+        <label for="brokerUrl">Broker URL:</label><br>
+        <input type="text" id="brokerUrl" name="brokerUrl" required><br>
+        <label for="username">Username:</label><br>
+        <input type="text" id="username" name="username" required><br>
+        <label for="password">Password:</label><br>
+        <input type="password" id="password" name="password" required><br>
+        <label for="topic">Topic:</label><br>
+        <input type="text" id="topic" name="topic" required><br>
+        <button type="submit">Connect</button>
+    </form>
+
+    <div>
+        <button id="videoModeButton">看视频</button>
+        <button id="photoModeButton">拍照</button>
+    </div>
+
+    <form id="cameraParamsForm">
+        <div class="param-group">
+            <input type="checkbox" id="flipCheckbox" name="flipCheckbox">
+            <label for="flipCheckbox">上下翻转:</label>
+            <select id="flip" name="flip">
+                <option value="0">不翻转</option>
+                <option value="1">翻转</option>
+            </select>
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="mirrorCheckbox" name="mirrorCheckbox">
+            <label for="mirrorCheckbox">左右翻转:</label>
+            <select id="mirror" name="mirror">
+                <option value="0">不翻转</option>
+                <option value="1">翻转</option>
+            </select>
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="framesizeCheckbox" name="framesizeCheckbox">
+            <label for="framesizeCheckbox">图片尺寸:</label>
+            <select id="framesize" name="framesize">
+                <option value="0">96x96</option>
+                <option value="1">160x120</option>
+                <option value="2">176x144</option>
+                <option value="3">240x160</option>
+                <option value="4">240x240</option>
+                <option value="5">320x240</option>
+                <option value="6">352x288</option>
+                <option value="7">480x320</option>
+                <option value="8">640x480</option>
+                <option value="9">800x600</option>
+                <option value="10">1024x768</option>
+                <option value="11">1280x720</option>
+                <option value="12">1280x1024</option>
+                <option value="13">1600x1200</option>
+                <option value="14" disabled>1920x1080</option>
+                <option value="15" disabled>1600x1200</option>
+                <option value="16" disabled>2048x1536</option>
+                <option value="17" disabled>2048x1536</option>
+                <option value="18" disabled>2560x1440</option>
+                <option value="19" disabled>2560x1600</option>
+                <option value="20" disabled>2560x1600</option>
+                <option value="21" disabled>2560x2048</option>
+            </select>
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="speffectCheckbox" name="speffectCheckbox">
+            <label for="speffectCheckbox">滤镜:</label>
+            <select id="speffect" name="speffect">
+                <option value="0">无效果</option>
+                <option value="1">负片</option>
+                <option value="2">灰度</option>
+                <option value="3">红色色调</option>
+                <option value="4">绿色色调</option>
+                <option value="5">蓝色色调</option>
+                <option value="6">棕褐色</option>
+            </select>
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="whitebalanceCheckbox" name="whitebalanceCheckbox">
+            <label for="whitebalanceCheckbox">白平衡:</label>
+            <select id="whitebalance" name="whitebalance">
+                <option value="0" selected>无</option>
+                <option value="1">夏天</option>
+                <option value="2">多云</option>
+                <option value="3">办公室</option>
+                <option value="4">家</option>
+            </select>
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="saturationCheckbox" name="saturationCheckbox">
+            <label for="saturationCheckbox">饱和度:</label>
+            <input type="number" id="saturation" name="saturation" step="0.1" min="-2.0" max="2.0" value="0">
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="brightnessCheckbox" name="brightnessCheckbox">
+            <label for="brightnessCheckbox">亮度:</label>
+            <input type="number" id="brightness" name="brightness" step="0.1" min="-2.0" max="2.0" value="0">
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="contrastCheckbox" name="contrastCheckbox">
+            <label for="contrastCheckbox">对比度:</label>
+            <input type="number" id="contrast" name="contrast" step="0.1" min="-2.0" max="2.0" value="0">
+        </div>
+        <div class="param-group">
+            <input type="checkbox" id="qualityCheckbox" name="qualityCheckbox">
+            <label for="qualityCheckbox">质量:</label>
+            <input type="number" id="quality" name="quality" min="10" max="63" value="10">
+        </div>
+        
+        <div class="param-group">
+            <input type="checkbox" id="rebootCheckbox" name="rebootCheckbox">
+            <label for="rebootCheckbox">重启:</label>
+            <input type="number" id="reboot" name="reboot" value="0" placeholder="只要勾选就重启">
+        </div>
+
+        <button type="submit">Send Camera Parameters</button>
+    </form>
+
+    <script>
+        // 从localStorage加载配置
+        const brokerUrlInput = document.getElementById("brokerUrl");
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const topicInput = document.getElementById("topic");
+
+        brokerUrlInput.value = localStorage.getItem("brokerUrl") || "ws://www.xxx.com:8083/mqtt";
+        usernameInput.value = localStorage.getItem("username") || "client";
+        passwordInput.value = localStorage.getItem("password") || "public";
+        topicInput.value = localStorage.getItem("topic") || "esp32/camera/data";
+
+        // 图像帧率和计数器
+        let frameCount = 0;
+        let startTime = Date.now();
+        let client = null;
+        let currentMode = "video";
+        let videoFrameNumber = 200;
+        let videoFrameCounter = 0;
+
+        // 记录上一次发送消息的时间戳
+        let lastSendTime = 0; 
+
+        // 表单提交事件
+        document.getElementById("mqttConfigForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            // 获取表单值
+            const MQTT_BROKER_URL = brokerUrlInput.value;
+            const USERNAME = usernameInput.value;
+            const PASSWORD = passwordInput.value;
+            const TOPIC_DATA = topicInput.value;
+
+            // 保存到localStorage
+            localStorage.setItem("brokerUrl", MQTT_BROKER_URL);
+            localStorage.setItem("username", USERNAME);
+            localStorage.setItem("password", PASSWORD);
+            localStorage.setItem("topic", TOPIC_DATA);
+
+            // 初始化MQTT客户端
+            client = new Paho.Client(MQTT_BROKER_URL, "clientId-" + Math.random().toString(16).substr(2, 8));
+
+            // 连接成功回调
+            client.onConnectionLost = (responseObject) => {
+                console.log("Connection lost: " + responseObject.errorMessage);
+            };
+
+            // 接收到消息回调
+            client.onMessageArrived = (message) => {
+                const payload = message.payloadBytes;
+                const arrayBuffer = new Uint8Array(payload).buffer;
+                const blob = new Blob([arrayBuffer], { type: "image/jpeg" });
+                const url = URL.createObjectURL(blob);
+
+                // 显示图像
+                const imgElement = document.getElementById("image");
+                imgElement.src = url;
+
+                // 计算FPS
+                frameCount++;
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                if (elapsedTime > 1) {
+                    const fps = frameCount / elapsedTime;
+                    document.getElementById("fps").innerText = `FPS: ${fps.toFixed(2)}`;
+                    frameCount = 0;
+                    startTime = Date.now();
+                }
+                
+                if (currentMode === "video") {
+                    videoFrameCounter--;
+                    if (videoFrameCounter <= 10) {
+                        setTimeout(() => sendFrameNumber(videoFrameNumber), 1000); // 每隔1秒发送一次
+                    }
+                }
+            };
+
+            // 连接到MQTT Broker
+            client.connect({
+                onSuccess: () => {
+                    console.log("Connected to MQTT Broker");
+                    console.log("Subscribed to topic: " + TOPIC_DATA);
+                    client.subscribe(TOPIC_DATA, { qos: 0 });
+                    // sendFrameNumber(videoFrameNumber); // 自动进入“看视频”模式
+                },
+                userName: USERNAME,
+                password: PASSWORD,
+                useSSL: false,
+                onFailure: (err) => {
+                    console.error("Connection failed: ", err);
+                }
+            });
+            
+            // 点击了连接，就尝试发送一次数据
+            if ((currentMode === "video") || (client && client.isConnected())) {
+                    console.log(currentMode === "video", videoFrameCounter)
+                    videoFrameCounter--;
+                    if (videoFrameCounter <= 10) {
+                        setTimeout(() => sendFrameNumber(videoFrameNumber), 1000); // 每隔1秒发送一次
+                    }
+                }
+        });
+
+        document.getElementById("videoModeButton").addEventListener("click", function() {
+            currentMode = "video";
+            sendFrameNumber(videoFrameNumber);
+        });
+
+        document.getElementById("photoModeButton").addEventListener("click", function() {
+            currentMode = "photo";
+            sendFrameNumber(3);
+        });
+
+        function sendFrameNumber(framenumber) {
+            const currentTime = Date.now(); // 获取当前时间戳
+
+            // 检查当前时间与上一次发送时间的间隔是否小于1秒
+            if (currentTime - lastSendTime < 1000) {
+                console.log("Message send rate limited: less than 1 second since last send.");
+                return; // 如果间隔小于1秒，直接返回
+            }
+
+            if (!client || !client.isConnected()) {
+                alert("Please connect to MQTT Broker first.");
+                return;
+            }
+
+            const params = { framenumber: framenumber };
+            const message = JSON.stringify(params);
+            const TOPIC_CMD = localStorage.getItem("topic").replace(/data$/, "cmd");
+
+            const mqttMessage = new Paho.Message(message);
+            mqttMessage.destinationName = TOPIC_CMD;
+            client.send(mqttMessage);
+            console.log("Message published: " + message);
+
+            if (currentMode === "video") {
+                videoFrameCounter = framenumber;
+            }
+            
+            // 更新上一次发送消息的时间戳
+            lastSendTime = currentTime;
+        }
+
+        document.getElementById("cameraParamsForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+
+            if (!client || !client.isConnected()) {
+                alert("Please connect to MQTT Broker first.");
+                return;
+            }
+
+            const params = {};
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    const inputId = checkbox.id.replace("Checkbox", "");
+                    const inputElement = document.getElementById(inputId);
+                    const value = inputElement.value;
+
+                    // 尝试将值转换为数字
+                    const numericValue = Number(value);
+                    if (!isNaN(numericValue)) {
+                        params[inputId] = numericValue;
+                    } else {
+                        params[inputId] = value;
+                    }
+                }
+            });
+
+            if (Object.keys(params).length === 0) {
+                alert("Please select at least one parameter to send.");
+                return;
+            }
+
+            // 设置默认framesize，从页面显示的默认选项中获取
+            if (!params.framesize) {
+                const framesizeSelect = document.getElementById("framesize");
+                params.framesize = parseInt(framesizeSelect.value, 10);
+            }
+
+            const message = JSON.stringify(params); // 将对象转换为JSON字符串
+            const TOPIC_CMD = localStorage.getItem("topic").replace(/data$/, "cmd");
+
+            const mqttMessage = new Paho.Message(message);
+            mqttMessage.destinationName = TOPIC_CMD;
+            client.send(mqttMessage);
+            console.log("Message published: " + message);
+
+            // 根据选择的framesize更新img标签的宽度和高度
+            const framesizeSelect = document.getElementById("framesize");
+            const framesizeValue = framesizeSelect.options[framesizeSelect.selectedIndex].text.split('x');
+            const imgElement = document.getElementById("image");
+            imgElement.style.width = framesizeValue[0] + 'px';
+            imgElement.style.height = framesizeValue[1] + 'px';
+        });
+    </script>
+</body>
+</html>
